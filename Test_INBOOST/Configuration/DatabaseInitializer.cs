@@ -49,7 +49,8 @@ namespace Test_INBOOST.Configuration
                 var usersTableQuery = @"
         IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Users' and xtype='U')
         CREATE TABLE Users (
-            Id BIGINT PRIMARY KEY,
+            Id UNIQUEIDENTIFIER PRIMARY KEY, 
+            UserId BIGINT NOT NULL,          
             UserName NVARCHAR( 100) NOT NULL,
             FirstName NVARCHAR(100),
             LastName NVARCHAR(100),
@@ -63,9 +64,10 @@ namespace Test_INBOOST.Configuration
                 db.Execute(usersTableQuery);
 
                 var weatherHistoryTableQuery = @"
-        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WeatherHistory' and xtype='U')
-        CREATE TABLE WeatherHistory (
-            Id BIGINT PRIMARY KEY,
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WeatherHistorys' and xtype='U')
+        CREATE TABLE WeatherHistorys (
+            Id UNIQUEIDENTIFIER PRIMARY KEY,
+            UserId BIGINT NOT NULL,       
             City NVARCHAR(100) NOT NULL,
             WeatherData NVARCHAR(MAX) NOT NULL,
             CreationDate DATETIME NOT NULL,

@@ -14,7 +14,7 @@ public class BaseRepository<TBaseData> : IBaseRepository<TBaseData> where TBaseD
     public BaseRepository(IConfiguration config)
     {
         _db = new SqlConnection(config.GetConnectionString("DefaultConnection"));
-        _tableName = typeof(TBaseData).Name + "s"; 
+        _tableName = typeof(TBaseData).Name+"s"; 
     }
 
     public async Task<string> GetConnectionString()
@@ -28,7 +28,7 @@ public class BaseRepository<TBaseData> : IBaseRepository<TBaseData> where TBaseD
         return await _db.QueryAsync<TBaseData>(sql);
     }
 
-    public async Task<TBaseData> FindByIdAsync(long id)
+    public async Task<TBaseData> FindByIdAsync(Guid id)
     {
         string sql = $"SELECT * FROM {_tableName} WHERE Id = @Id AND Deleted = 0";
         return await _db.QuerySingleOrDefaultAsync<TBaseData>(sql, new { Id = id });
@@ -48,7 +48,7 @@ public class BaseRepository<TBaseData> : IBaseRepository<TBaseData> where TBaseD
         await _db.ExecuteAsync(sql, document);
     }
 
-    public async Task DeleteOneAsync(long id)
+    public async Task DeleteOneAsync(Guid id)
     {
         string sql = $"UPDATE {_tableName} SET Deleted = 1, DeletionDate = @Date WHERE Id = @Id";
         await _db.ExecuteAsync(sql, new { Id = id, Date = DateTime.UtcNow });

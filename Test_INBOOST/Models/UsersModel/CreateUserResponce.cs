@@ -1,6 +1,6 @@
 ﻿namespace Test_INBOOST.Models.UsersModel;
 
-public class UserDTO
+public class CreateUserResponce
 {
     
     public string UserName { get; set; }
