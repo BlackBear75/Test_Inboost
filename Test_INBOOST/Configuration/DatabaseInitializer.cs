@@ -64,16 +64,21 @@ namespace Test_INBOOST.Configuration
                 db.Execute(usersTableQuery);
 
                 var weatherHistoryTableQuery = @"
-        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WeatherHistorys' and xtype='U')
-        CREATE TABLE WeatherHistorys (
-            Id UNIQUEIDENTIFIER PRIMARY KEY,
-            UserId BIGINT NOT NULL,       
-            City NVARCHAR(100) NOT NULL,
-            WeatherData NVARCHAR(MAX) NOT NULL,
-            CreationDate DATETIME NOT NULL,
-            Deleted BIT NOT NULL DEFAULT 0,
-            DeletionDate DATETIME
-        )";
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WeatherHistorys' AND xtype='U')
+    CREATE TABLE WeatherHistorys (
+        Id UNIQUEIDENTIFIER PRIMARY KEY,
+        UserId BIGINT NOT NULL,       
+        City NVARCHAR(100) NOT NULL,
+        WeatherDescription NVARCHAR(255) NOT NULL,
+        Temperature NVARCHAR(50) NOT NULL,
+        FeelsLike NVARCHAR(50) NOT NULL,
+        Humidity NVARCHAR(50) NOT NULL,
+        WindSpeed NVARCHAR(50) NOT NULL,
+        Country NVARCHAR(100) NOT NULL,
+        CreationDate DATETIME NOT NULL,
+        Deleted BIT NOT NULL DEFAULT 0,
+        DeletionDate DATETIME
+    )";
 
                 db.Execute(weatherHistoryTableQuery);
             }

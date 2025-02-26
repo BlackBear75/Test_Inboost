@@ -2,6 +2,7 @@
 using Test_INBOOST.Entity.WeatherHistory;
 using Test_INBOOST.Entity.WeatherHistory.Repository;
 using Test_INBOOST.Models.WeatherHistoryModel;
+using Test_INBOOST.Service;
 
 
 namespace Test_INBOOST.Controller;
@@ -10,85 +11,70 @@ namespace Test_INBOOST.Controller;
 [Route("api/weather")]
 public class WeatherHistoryController : ControllerBase
 {
-    private readonly IWeatherHistoryRepository<WeatherHistory> _weatherHistoryRepository;
+    private readonly IWeatherHistoryService _weatherService;
 
-    public WeatherHistoryController(IWeatherHistoryRepository<WeatherHistory> weatherHistoryRepository)
+    public WeatherHistoryController(IWeatherHistoryService weatherService)
     {
-        _weatherHistoryRepository = weatherHistoryRepository;
+         _weatherService = weatherService;
     }
 
     [HttpPost("create")]
     public async Task<IActionResult> CreateWeatherHistory([FromBody] CreateWeatherHistoryResponce createWeatherHistoryResponce)
     {
-        WeatherHistory newWeatherHistory = new WeatherHistory()
-        {
-            City = createWeatherHistoryResponce.City,
-            WeatherData = createWeatherHistoryResponce.WeatherData,
-        };
-
-        await _weatherHistoryRepository.InsertOneAsync(newWeatherHistory);
+        await _weatherService.CreateWeatherHistory(createWeatherHistoryResponce);
         return Ok("Запис погоди додано.");
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAllWeatherHistory()
     {
-        var weatherHistoryList = await _weatherHistoryRepository.GetAllAsync();
-        var result = new List<GetWeatherHistoryResponce>();
-
-        foreach (var weatherHistory in weatherHistoryList)
-        {
-            result.Add(new GetWeatherHistoryResponce()
-            {
-              Id = weatherHistory.Id,
-              City = weatherHistory.City,
-              WeatherData = weatherHistory.WeatherData,
-            });
-        }
-        return Ok(weatherHistoryList);
+        var result = await _weatherService.GetAllWeatherHistory();
+        return Ok(result);
     }
     
     [HttpDelete("DeleteByUserId/{id}/{userId}")]
     public async Task<IActionResult> DeleteWeatherHistory(Guid id,long userId)
     {
-        var user = await _weatherHistoryRepository.FindByIdAsync(id);
-        if (user == null) return NotFound("Запис погоди не знайдений.");
+
+        if (await _weatherService.DeleteWeatherHistory(id, userId))
+        {
+            return Ok("Запис погоди видалений.");
+        }
+        return NotFound("Запис не знайдений");
         
-        
-        await _weatherHistoryRepository.DeleteByUserIdAsync(id, userId);
-        return Ok("Запис погоди видалений.");
+     
     }
     
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetWeatherHistoryById(Guid id)
     {
-        var weatherHistory = await _weatherHistoryRepository.FindByIdAsync(id);
-        if (weatherHistory == null) return NotFound("Запис погоди не знайдений.");
+     
 
-        return Ok(weatherHistory);
+        return Ok( await _weatherService.GetWeatherHistoryById(id));
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateWeatherHistory(Guid id, [FromBody] CreateWeatherHistoryResponce createWeatherHistoryResponce)
     {
-        var existingWeatherHistory = await _weatherHistoryRepository.FindByIdAsync(id);
-        if (existingWeatherHistory == null) return NotFound("Запис погоди не знайдений.");
+        if (await _weatherService.UpdateWeatherHistory(id, createWeatherHistoryResponce))
+        {
+            
+            return Ok("Запис погоди оновлено.");
+        }
 
-        existingWeatherHistory.City = createWeatherHistoryResponce.City;
-        existingWeatherHistory.WeatherData = createWeatherHistoryResponce.WeatherData;
-
-        await _weatherHistoryRepository.UpdateOneAsync(existingWeatherHistory);
-        return Ok("Запис погоди оновлено.");
+        return Ok("Помилка оновлення");
     }
 
     [HttpDelete("DeleteById/{id}")]
     public async Task<IActionResult> DeleteWeatherHistory(Guid id)
     {
-        var weatherHistory = await _weatherHistoryRepository.FindByIdAsync(id);
-        if (weatherHistory == null) return NotFound("Запис погоди не знайдений.");
+        if (await _weatherService.DeleteWeatherHistory(id))
+        {
+            return Ok("Запис погоди видалено.");
+        }
 
-        await _weatherHistoryRepository.DeleteOneAsync(id);
-        return Ok("Запис погоди видалено.");
+        return NotFound("Не має такого обєкта");
+
     }
 }
