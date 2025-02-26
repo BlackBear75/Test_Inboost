@@ -8,5 +8,6 @@ public interface IBaseRepository<TBaseData> where TBaseData : BaseData
     Task UpdateOneAsync(TBaseData document);
     Task DeleteOneAsync(Guid id);
     Task<string> GetConnectionString();
+    Task<IEnumerable<TBaseData>> FindAllByIdAsync(Guid id);
 
 }

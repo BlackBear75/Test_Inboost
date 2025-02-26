@@ -41,12 +41,12 @@ namespace Test_INBOOST.Service
             var cityName = weatherData["name"]?.ToString();
             var country = weatherData["sys"]?["country"]?.ToString();
 
-            var formattedWeather = $"Weather in {cityName}, {country}:\n" +
-                                   $"- Description: {weatherDescription}\n" +
-                                   $"- Temperature: {temperature}°C\n" +
-                                   $"- Feels Like: {feelsLike}°C\n" +
-                                   $"- Humidity: {humidity}%\n" +
-                                   $"- Wind Speed: {windSpeed} m/s";
+            var formattedWeather = $"Погода в {cityName}, {country}:\n" +
+                                   $"- Опис: {weatherDescription}\n" +
+                                   $"- Температура: {temperature}°C\n" +
+                                   $"- Відчувається як: {feelsLike}°C\n" +
+                                   $"- Вологість: {humidity}%\n" +
+                                   $"- Швидкість вітру: {windSpeed} м/с";
 
             await _weatherHistoryRepository.InsertOneAsync(new WeatherHistory()
             {

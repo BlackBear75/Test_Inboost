@@ -16,7 +16,7 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
-    [HttpPost("create")]
+    [HttpPost("createUser")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserResponce createUser)
     {
         await _userService.CreateUser(createUser);
@@ -34,10 +34,26 @@ public class UserController : ControllerBase
         return NotFound("Користувач не знайдений ");
     }
     
-    [HttpGet("GetAll")]
+    [HttpGet("GetAllUsers")]
     public async Task<IActionResult> GetAllUsers()
     {
         return Ok( await  _userService.GetAllUsers());
+    }
+      
+    [HttpGet("GetUser/{id}")]
+    public async Task<IActionResult> GetUser(Guid id)
+    {
+        return Ok( await  _userService.GetUserById(id));
+    }
+    
+    [HttpGet("GetUserAndWeatherHistory")]
+    public async Task<IActionResult> GetUserAndWeatherHistory(Guid id,long userId)
+    {
+        if (userId == 0&&id == Guid.Empty)
+        {
+            return BadRequest("Уведіть хоч 1 Id");
+        }
+        return Ok( await _userService.GetUserAndWeatherHistory(id, userId));
     }
 
 

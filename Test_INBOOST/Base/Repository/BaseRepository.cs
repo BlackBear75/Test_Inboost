@@ -21,6 +21,11 @@ public class BaseRepository<TBaseData> : IBaseRepository<TBaseData> where TBaseD
     {
         return _db.ConnectionString;
     }
+    public async Task<IEnumerable<TBaseData>> FindAllByIdAsync(Guid id)
+    {
+        string sql = $"SELECT * FROM {_tableName} WHERE Id = @Id AND Deleted = 0";
+        return await _db.QueryAsync<TBaseData>(sql, new { Id = id });
+    }
 
     public async Task<IEnumerable<TBaseData>> GetAllAsync()
     {

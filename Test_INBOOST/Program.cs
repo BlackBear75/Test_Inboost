@@ -6,7 +6,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.ConfigureServices();
 
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()  
+            .AllowAnyHeader()); 
+});
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -19,6 +26,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Test_INBOOST.Entity.WeatherHistory;
 using Test_INBOOST.Entity.WeatherHistory.Repository;
+using Test_INBOOST.Models.UsersModel;
 using Test_INBOOST.Models.WeatherHistoryModel;
 
 namespace Test_INBOOST.Service;
 
 public interface IWeatherHistoryService
 {
-    Task<List<GetWeatherHistoryResponce>> GetAllWeatherHistory();
+    Task<List<WeatherHistory>> GetAllUserWeatherHistory(long userId);
     Task<bool> CreateWeatherHistory(CreateWeatherHistoryResponce createWeatherHistoryResponce);
     Task<bool> DeleteWeatherHistory(Guid id, long userId);
 
@@ -30,27 +31,12 @@ public class WeatherHistoryService : IWeatherHistoryService
      
     }
 
-    public async Task<List<GetWeatherHistoryResponce>> GetAllWeatherHistory()
+    public async Task<List<WeatherHistory>> GetAllUserWeatherHistory(long userId)
     {
-        var weatherHistoryList = await _weatherHistoryRepository.GetAllAsync();
-        var result = new List<GetWeatherHistoryResponce>();
-
-        foreach (var weatherHistory in weatherHistoryList)
-        {
-            result.Add(new GetWeatherHistoryResponce()
-            {
-                Id = weatherHistory.Id,
-                City = weatherHistory.City,
-                WeatherDescription = weatherHistory.WeatherDescription,
-                Temperature = weatherHistory.Temperature,
-                FeelsLike = weatherHistory.FeelsLike,
-                Humidity = weatherHistory.Humidity,
-                WindSpeed = weatherHistory.WindSpeed,
-                Country = weatherHistory.Country
-            });
-        }
-            
-        return result;
+        
+        var weatherHistoryList = await _weatherHistoryRepository.FindByUserIdAsync(userId);
+        
+        return weatherHistoryList.ToList();
     }
 
     public async Task<bool> CreateWeatherHistory(CreateWeatherHistoryResponce createWeatherHistoryResponce)

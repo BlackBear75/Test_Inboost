@@ -25,10 +25,10 @@ public class WeatherHistoryController : ControllerBase
         return Ok("Запис погоди додано.");
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAllWeatherHistory()
+    [HttpGet("GetUserWeatherHistory/{userId}")]
+    public async Task<IActionResult> GetAllWeatherHistory(long userId)
     {
-        var result = await _weatherService.GetAllWeatherHistory();
+        var result = await _weatherService.GetAllUserWeatherHistory(userId);
         return Ok(result);
     }
     

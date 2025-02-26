@@ -54,7 +54,6 @@ namespace Test_INBOOST.Configuration
             UserName NVARCHAR( 100) NOT NULL,
             FirstName NVARCHAR(100),
             LastName NVARCHAR(100),
-            Email NVARCHAR(100),
             Role INT NOT NULL,
             CreationDate DATETIME NOT NULL,
             Deleted BIT NOT NULL DEFAULT 0,
