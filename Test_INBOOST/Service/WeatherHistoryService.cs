@@ -13,6 +13,9 @@ public interface IWeatherHistoryService
     Task<bool> DeleteWeatherHistory(Guid id, long userId);
 
     Task<WeatherHistory> GetWeatherHistoryById(Guid id);
+    
+    
+    Task<List<WeatherHistory>> GetReceivedWeatherHistory(long id);
 
     Task<bool> UpdateWeatherHistory(Guid id,
         [FromBody] CreateWeatherHistoryResponce createWeatherHistoryResponce);
@@ -98,6 +101,22 @@ public class WeatherHistoryService : IWeatherHistoryService
         }
 
     }
+
+    public async Task<List<WeatherHistory>> GetReceivedWeatherHistory(long id)
+    {
+        try
+        {
+            var receivedWeatherHistory = await _weatherHistoryRepository.FindReceivedWeatherByUserIdAsync(id);
+        
+            return receivedWeatherHistory?.ToList() ?? new List<WeatherHistory>();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Помилка отримання отриманої погоди: {e.Message}");
+            throw;
+        }
+    }
+
 
     public async Task<bool> UpdateWeatherHistory(Guid id, CreateWeatherHistoryResponce createWeatherHistoryResponce)
     {

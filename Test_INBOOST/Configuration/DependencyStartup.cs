@@ -6,6 +6,7 @@ using Test_INBOOST.Entity.User.Repository;
 using Test_INBOOST.Entity.WeatherHistory.Repository;
 using Test_INBOOST.Service;
 using Test_INBOOST.Entity.WeatherHistory;
+using Test_INBOOST.TelegramAPI;
 
 namespace Test_INBOOST.Configuration
 {
@@ -46,9 +47,10 @@ namespace Test_INBOOST.Configuration
             
             var userService = services.BuildServiceProvider().GetRequiredService<IUserService>();
             
+            var weatherHistoryService = services.BuildServiceProvider().GetRequiredService<IWeatherHistoryService>();
             var userRepository = services.BuildServiceProvider().GetRequiredService<IUserRepository<User>>();
 
-            var botService = new TelegramBotService(botClient, weatherService,userRepository,userService);
+            var botService = new TelegramBotService(botClient, weatherService,userRepository,userService,weatherHistoryService);
 
             services.AddSingleton(botService);
 

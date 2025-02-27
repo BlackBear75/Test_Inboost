@@ -102,6 +102,8 @@ public class UserService : IUserService
         var resultWeatherHistory = new List<GetUserAndWeatherHistoryResponse>();
         foreach (var item in listWeatherHistory)
         {
+            if(item.RecipientUserId!=0) continue;
+            
              var getUserAndWeatherHistory = new GetUserAndWeatherHistoryResponse()
             {
                 UserId = existingUser.UserId,

@@ -1,7 +1,6 @@
 ﻿using System.Data;
 using System.Data.SqlClient;
 using Dapper;
-using Jester.Configuration;
 using Test_INBOOST.Base;
 using Test_INBOOST.Base.Repository;
 

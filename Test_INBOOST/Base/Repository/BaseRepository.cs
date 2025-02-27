@@ -2,8 +2,6 @@
 using System.Data.SqlClient;
 using System.Linq.Expressions;
 using Dapper;
-using Jester.Configuration;
-
 namespace Test_INBOOST.Base.Repository;
 
 public class BaseRepository<TBaseData> : IBaseRepository<TBaseData> where TBaseData : BaseData

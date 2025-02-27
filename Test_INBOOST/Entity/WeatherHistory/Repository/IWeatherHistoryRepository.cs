@@ -7,4 +7,8 @@ public interface IWeatherHistoryRepository<TBaseData> : IBaseRepository<TBaseDat
 {
     Task<IEnumerable<TBaseData>> FindByUserIdAsync(long userId);
     Task DeleteByUserIdAsync(Guid id,long userId);
+   
+    Task<IEnumerable<TBaseData>> FindReceivedWeatherByUserIdAsync(long userId);
+    
+
 }

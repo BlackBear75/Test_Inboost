@@ -50,7 +50,7 @@ namespace Test_INBOOST.Configuration
         IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Users' and xtype='U')
         CREATE TABLE Users (
             Id UNIQUEIDENTIFIER PRIMARY KEY, 
-            UserId BIGINT NOT NULL,          
+            UserId BIGINT NOT NULL,                 
             UserName NVARCHAR( 100) NOT NULL,
             FirstName NVARCHAR(100),
             LastName NVARCHAR(100),
@@ -67,6 +67,7 @@ namespace Test_INBOOST.Configuration
     CREATE TABLE WeatherHistorys (
         Id UNIQUEIDENTIFIER PRIMARY KEY,
         UserId BIGINT NOT NULL,       
+        RecipientUserId BIGINT NOT NULL,  
         City NVARCHAR(100) NOT NULL,
         WeatherDescription NVARCHAR(255) NOT NULL,
         Temperature NVARCHAR(50) NOT NULL,

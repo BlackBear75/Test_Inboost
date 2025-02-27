@@ -22,4 +22,12 @@ public class WeatherController : ControllerBase
      var res = await _weatherService.GetWeatherAsync(city,userrid);
       return Ok(res);
     }
+
+    [HttpGet("SendWeather")]
+    public async Task<IActionResult> SendWeather(string city, long userId, long recepientId)
+    {
+        
+        return Ok(await _weatherService.SendWeather(city,userId,recepientId));
+    }
+    
 }
