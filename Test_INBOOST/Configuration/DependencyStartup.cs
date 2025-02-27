@@ -16,8 +16,10 @@ namespace Test_INBOOST.Configuration
         {
             AddDbContext(builder.Services, builder.Configuration);
             ConfigureService(builder.Services);
+            ConfigureRepository(builder.Services);
             WeatherConfiguration(builder.Services, builder.Configuration);
             BotConfiguration(builder.Services, builder.Configuration);
+            
         }
 
         private static void AddDbContext(IServiceCollection services, IConfiguration configuration)
@@ -29,10 +31,14 @@ namespace Test_INBOOST.Configuration
             dbInitializer.Initialize();
         }
 
-        private static void ConfigureService(IServiceCollection services)
+        private static void ConfigureRepository(IServiceCollection services)
         {
             services.AddScoped(typeof(IUserRepository<>), typeof(UserRepository<>));
             services.AddScoped(typeof(IWeatherHistoryRepository<>), typeof(WeatherHistoryRepository<>));
+        }
+        private static void ConfigureService(IServiceCollection services)
+        {
+       
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IWeatherHistoryService, WeatherHistoryService>();
         }
@@ -44,9 +50,7 @@ namespace Test_INBOOST.Configuration
             var botClient = new TelegramBotClient(token);
 
             var weatherService = services.BuildServiceProvider().GetRequiredService<IWeatherService>();
-            
             var userService = services.BuildServiceProvider().GetRequiredService<IUserService>();
-            
             var weatherHistoryService = services.BuildServiceProvider().GetRequiredService<IWeatherHistoryService>();
             var userRepository = services.BuildServiceProvider().GetRequiredService<IUserRepository<User>>();
 
@@ -60,9 +64,6 @@ namespace Test_INBOOST.Configuration
 
         private static void WeatherConfiguration(IServiceCollection services, IConfiguration configuration)
         {
-       
-
-
             services.AddHttpClient<IWeatherService, WeatherService>(client =>
             {
                 client.BaseAddress = new Uri("http://api.openweathermap.org/data/2.5/");

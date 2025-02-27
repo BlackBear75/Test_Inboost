@@ -2,6 +2,8 @@
 
 public class CreateWeatherHistoryResponce
 {
+    
+    public long UserId { get; set; } 
     public string City { get; set; } 
     public string WeatherDescription { get; set; }
     public string Temperature { get; set; }

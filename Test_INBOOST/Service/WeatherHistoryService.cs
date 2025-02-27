@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Telegram.Bot.Types;
+using Test_INBOOST.Entity.User.Repository;
 using Test_INBOOST.Entity.WeatherHistory;
 using Test_INBOOST.Entity.WeatherHistory.Repository;
 using Test_INBOOST.Models.UsersModel;
 using Test_INBOOST.Models.WeatherHistoryModel;
+using User = Test_INBOOST.Entity.User.User;
 
 namespace Test_INBOOST.Service;
 
@@ -10,10 +13,8 @@ public interface IWeatherHistoryService
 {
     Task<List<WeatherHistory>> GetAllUserWeatherHistory(long userId);
     Task<bool> CreateWeatherHistory(CreateWeatherHistoryResponce createWeatherHistoryResponce);
-    Task<bool> DeleteWeatherHistory(Guid id, long userId);
 
     Task<WeatherHistory> GetWeatherHistoryById(Guid id);
-    
     
     Task<List<WeatherHistory>> GetReceivedWeatherHistory(long id);
 
@@ -27,10 +28,12 @@ public class WeatherHistoryService : IWeatherHistoryService
 {
     private readonly IWeatherHistoryRepository<WeatherHistory> _weatherHistoryRepository;
 
+    private readonly IUserRepository<User> _userRepository;
 
-    public WeatherHistoryService(IWeatherHistoryRepository<WeatherHistory> weatherHistoryRepository)
+    public WeatherHistoryService(IWeatherHistoryRepository<WeatherHistory> weatherHistoryRepository,IUserRepository<User> userRepository)
     {
         _weatherHistoryRepository = weatherHistoryRepository;
+        _userRepository = userRepository;
      
     }
 
@@ -44,10 +47,18 @@ public class WeatherHistoryService : IWeatherHistoryService
 
     public async Task<bool> CreateWeatherHistory(CreateWeatherHistoryResponce createWeatherHistoryResponce)
     {
+        
         try
         {
+            var existingUser  = await _userRepository.FindByUserIdAsync(createWeatherHistoryResponce.UserId);
+            if (existingUser == null)
+            {
+                return false;
+            }
+            
             WeatherHistory newWeatherHistory = new WeatherHistory()
             {
+                UserId = createWeatherHistoryResponce.UserId,
                 City = createWeatherHistoryResponce.City,
                 WeatherDescription = createWeatherHistoryResponce.WeatherDescription,
                 Temperature = createWeatherHistoryResponce.Temperature,
@@ -68,24 +79,7 @@ public class WeatherHistoryService : IWeatherHistoryService
         return true;
     }
 
-    public async Task<bool> DeleteWeatherHistory(Guid id, long userId)
-    {
-        try
-        {
-            var weatherHistory = await _weatherHistoryRepository.FindByIdAsync(id);
-            if (weatherHistory == null) return false;
-        
-            await _weatherHistoryRepository.DeleteByUserIdAsync(id, userId);
-            return true;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-       
-    }
-
+   
     public async Task<WeatherHistory> GetWeatherHistoryById(Guid id)
     {
         try
@@ -122,9 +116,12 @@ public class WeatherHistoryService : IWeatherHistoryService
     {
         try
         {
+        
+            
             var existingWeatherHistory = await _weatherHistoryRepository.FindByIdAsync(id);
             if (existingWeatherHistory == null) return false;
 
+            existingWeatherHistory.UserId = createWeatherHistoryResponce.UserId;
             existingWeatherHistory.City = createWeatherHistoryResponce.City;
             existingWeatherHistory.WeatherDescription = createWeatherHistoryResponce.WeatherDescription;
             existingWeatherHistory.Temperature = createWeatherHistoryResponce.Temperature;

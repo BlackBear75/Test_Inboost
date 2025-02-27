@@ -3,6 +3,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using Test_INBOOST.Entity.User;
 using Test_INBOOST.Entity.User.Repository;
 using Test_INBOOST.Entity.WeatherHistory;
 using Test_INBOOST.Helper;
@@ -112,7 +113,8 @@ public class TelegramBotService
                 UserId = message.From.Id,
                 UserName = message.From.Username,
                 FirstName = message.Chat.FirstName,
-                LastName = message.Chat.LastName
+                LastName = message.Chat.LastName,
+                Role = UserRole.User
             };
             await _userRepository.InsertOneAsync(newUser);
         }

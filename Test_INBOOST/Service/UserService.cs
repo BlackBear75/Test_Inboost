@@ -34,8 +34,15 @@ public class UserService : IUserService
     {
         try
         {
+            var existingUser  = await _userRepository.FindByUserIdAsync(createUser.UserId);
+            if (existingUser  != null)
+            {
+                return false;
+            }
+            
             User newUser = new User()
             {
+                UserId = createUser.UserId,
                 UserName = createUser.UserName,
                 FirstName = createUser.FirstName,
                 LastName = createUser.LastName,
@@ -152,6 +159,7 @@ public class UserService : IUserService
         var existingUser  = await _userRepository.FindByIdAsync(id);
         if (existingUser  == null) return false;
 
+        existingUser.UserId = createUser.UserId;
         existingUser .UserName = createUser.UserName;
         existingUser .FirstName = createUser.FirstName;
         existingUser .LastName = createUser.LastName;

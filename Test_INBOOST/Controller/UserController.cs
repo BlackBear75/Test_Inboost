@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Test_INBOOST.Entity.User;
-using Test_INBOOST.Entity.User.Repository;
 using Test_INBOOST.Models.UsersModel;
 using Test_INBOOST.Service;
 
@@ -19,7 +17,11 @@ public class UserController : ControllerBase
     [HttpPost("createUser")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserResponce createUser)
     {
-        await _userService.CreateUser(createUser);
+        if (!await _userService.CreateUser(createUser))
+        {
+            return BadRequest("Юзер з таким Id уже існує");
+        }
+
         return Ok("Користувач доданий у базу.");
     }
     

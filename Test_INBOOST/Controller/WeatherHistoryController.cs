@@ -21,8 +21,12 @@ public class WeatherHistoryController : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> CreateWeatherHistory([FromBody] CreateWeatherHistoryResponce createWeatherHistoryResponce)
     {
-        await _weatherService.CreateWeatherHistory(createWeatherHistoryResponce);
-        return Ok("Запис погоди додано.");
+        if (await _weatherService.CreateWeatherHistory(createWeatherHistoryResponce))
+        {
+            return Ok("Запис погоди додано.");
+        }
+        
+        return BadRequest("Користувача з таким айд не існує");
     }
 
     [HttpGet("GetUserWeatherHistory/{userId}")]
@@ -32,25 +36,9 @@ public class WeatherHistoryController : ControllerBase
         return Ok(result);
     }
     
-    [HttpDelete("DeleteByUserId/{id}/{userId}")]
-    public async Task<IActionResult> DeleteWeatherHistory(Guid id,long userId)
-    {
-
-        if (await _weatherService.DeleteWeatherHistory(id, userId))
-        {
-            return Ok("Запис погоди видалений.");
-        }
-        return NotFound("Запис не знайдений");
-        
-     
-    }
-    
-
     [HttpGet("{id}")]
     public async Task<IActionResult> GetWeatherHistoryById(Guid id)
     {
-     
-
         return Ok( await _weatherService.GetWeatherHistoryById(id));
     }
 
@@ -63,7 +51,7 @@ public class WeatherHistoryController : ControllerBase
             return Ok("Запис погоди оновлено.");
         }
 
-        return Ok("Помилка оновлення");
+        return BadRequest("Помилка оновлення немає такого запису");
     }
 
     [HttpDelete("DeleteById/{id}")]
@@ -75,6 +63,14 @@ public class WeatherHistoryController : ControllerBase
         }
 
         return NotFound("Не має такого обєкта");
+
+    }
+    
+    [HttpGet("GetReceivedWeatherHistory/{id}")]
+    public async Task<IActionResult> GetReceivedWeatherHistory(long id)
+    {
+
+        return Ok(await _weatherService.GetReceivedWeatherHistory(id));
 
     }
 }
