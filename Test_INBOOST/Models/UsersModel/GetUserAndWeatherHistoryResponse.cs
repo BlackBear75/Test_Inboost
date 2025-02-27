@@ -10,7 +10,7 @@ public class GetUserAndWeatherHistoryResponse
     public string UserName { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
-    public List<GetWeatherHistoryResponce> WeatherHistory { get; set; }
+    public List<WeatherHistory> WeatherHistory { get; set; }
 }
 
     

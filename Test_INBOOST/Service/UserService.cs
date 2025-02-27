@@ -102,7 +102,7 @@ public class UserService : IUserService
         var resultWeatherHistory = new List<GetUserAndWeatherHistoryResponse>();
         foreach (var item in listWeatherHistory)
         {
-            if(item.RecipientUserId!=0) continue;
+            if(item.RecipientUserId!=null) continue;
             
              var getUserAndWeatherHistory = new GetUserAndWeatherHistoryResponse()
             {
@@ -110,9 +110,9 @@ public class UserService : IUserService
                 UserName = existingUser.UserName,
                 FirstName = existingUser.FirstName,
                 LastName = existingUser.LastName,
-                WeatherHistory = new List<GetWeatherHistoryResponce>()
+                WeatherHistory = new List<WeatherHistory>()
             };
-             getUserAndWeatherHistory.WeatherHistory.Add(new GetWeatherHistoryResponce()
+             getUserAndWeatherHistory.WeatherHistory.Add(new WeatherHistory()
              {
                  Id = item.Id,
                  Country = item.Country,
@@ -122,7 +122,7 @@ public class UserService : IUserService
                  WindSpeed = item.WindSpeed,
                  FeelsLike = item.FeelsLike,
                  WeatherDescription = item.WeatherDescription,
-                 Date = item.CreationDate
+                 CreationDate = item.CreationDate
              });
              
              resultWeatherHistory.Add(getUserAndWeatherHistory);

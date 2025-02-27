@@ -67,7 +67,7 @@ namespace Test_INBOOST.Configuration
     CREATE TABLE WeatherHistorys (
         Id UNIQUEIDENTIFIER PRIMARY KEY,
         UserId BIGINT NOT NULL,       
-        RecipientUserId BIGINT NOT NULL,  
+        RecipientUserId BIGINT,  
         City NVARCHAR(100) NOT NULL,
         WeatherDescription NVARCHAR(255) NOT NULL,
         Temperature NVARCHAR(50) NOT NULL,

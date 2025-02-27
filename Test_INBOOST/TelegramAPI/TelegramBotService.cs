@@ -1,7 +1,11 @@
 ﻿using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 using Test_INBOOST.Entity.User.Repository;
+using Test_INBOOST.Entity.WeatherHistory;
+using Test_INBOOST.Helper;
 using Test_INBOOST.Service;
 using User = Test_INBOOST.Entity.User.User;
 
@@ -9,215 +13,255 @@ namespace Test_INBOOST.TelegramAPI;
 
 public class TelegramBotService
 {
+    private Dictionary<long, long> _pendingWeatherRequests = new Dictionary<long, long>();
     private readonly ITelegramBotClient _botClient;
     private readonly IWeatherService _weatherService;
-    
     private readonly IWeatherHistoryService _weatherHistoryService;
-    
     private readonly IUserRepository<User> _userRepository;
     private readonly IUserService _userService;
 
-    public TelegramBotService(ITelegramBotClient botClient, IWeatherService weatherService, IUserRepository<User> userRepository, IUserService userService, IWeatherHistoryService weatherHistoryService)
+    private readonly ReplyKeyboardMarkup _mainKeyboard = new(new[]
+    {
+        new KeyboardButton[] { "🌦 Погода", "📤 Відправити погоду" },
+        new KeyboardButton[] { "📨 Отримана погода", "📊 Історія погоди" },
+        new KeyboardButton[] { "👥 Користувачі", "ℹ️ Допомога" }
+    })
+    {
+        ResizeKeyboard = true
+    };
+
+    public TelegramBotService(ITelegramBotClient botClient, IWeatherService weatherService, 
+        IUserRepository<User> userRepository, IUserService userService, 
+        IWeatherHistoryService weatherHistoryService)
     {
         _userService = userService;
         _userRepository = userRepository;
         _botClient = botClient;
         _weatherService = weatherService;
         _weatherHistoryService = weatherHistoryService;
-        
     }
 
     public void StartPolling()
     {
         _botClient.StartReceiving(
-            updateHandler: HandleUpdatesAsync,    
-            errorHandler: HandleErrorAsync,      
+            updateHandler: HandleUpdatesAsync,
+            errorHandler: HandleErrorAsync,
             cancellationToken: CancellationToken.None
         );
     }
 
-private async Task HandleUpdatesAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
-{
-    if (update?.Message?.Text != null)
+    private async Task HandleUpdatesAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
-        var chatId = update.Message.Chat.Id;
-        var messageText = update.Message.Text.Trim();
-
-        if (messageText.StartsWith("/start"))
+        if (update.Message is { } message)
         {
-            var existingUser = await _userRepository.FindByUserIdAsync(chatId);
-
-            if (existingUser == null)
+            var chatId = message.Chat.Id;
+            
+            await EnsureUserExists(message);
+            
+            if (message.Text == "/start")
             {
-                var newUser = new User
-                {
-                    UserId = update.Message.From.Id,
-                    UserName = update.Message.From.Username,
-                    FirstName = update.Message.Chat.FirstName,
-                    LastName = update.Message.Chat.LastName
-                };
-
-                await _userRepository.InsertOneAsync(newUser);
-            }
-
-            await botClient.SendTextMessageAsync(chatId, "👋 Доброго дня! Напишіть /help, щоб переглянути команди.");
-        }
-        else if (messageText.StartsWith("/weather"))
-        {
-            var city = messageText.Replace("/weather", "").Trim();
-            if (string.IsNullOrEmpty(city))
-            {
-                await botClient.SendTextMessageAsync(chatId, "❌ Будь ласка, введіть місто.");
+                await HandleStartCommand(chatId);
                 return;
             }
 
-            var weatherResponse = await _weatherService.GetWeatherAsync(city, chatId);
-            await botClient.SendTextMessageAsync(chatId, weatherResponse);
-        }
-        else if (messageText.StartsWith("/sendweather"))
-        {
-            var parts = messageText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 3 || !long.TryParse(parts[1], out long recipientId))
+            if (message.ReplyToMessage?.Text?.Contains("Введіть назву міста:") ?? false)
             {
-                await botClient.SendTextMessageAsync(chatId, "❌ Невірний формат. Використовуйте: /sendweather {userId} {місто}");
+                await HandleCityInput(chatId, message.Text);
                 return;
             }
 
-            var city = string.Join(" ", parts.Skip(2)); 
-            await _weatherService.SendWeather(city, chatId, recipientId);
-
-            await botClient.SendTextMessageAsync(chatId, $"✅ Погода для {city} успішно відправлена користувачу з id {recipientId}.");
+            switch (message.Text)
+            {
+                case "🌦 Погода":
+                    await RequestCityInput(chatId, "weather");
+                    break;
+                case "📤 Відправити погоду":
+                    await RequestCityAndUserInput(chatId);
+                    break;
+                case "📨 Отримана погода":
+                    await ShowReceivedWeather(chatId);
+                    break;
+                case "📊 Історія погоди":
+                     await RequestUserForHistory(chatId);
+                    break;
+                case "👥 Користувачі":
+                    await ShowUsers(chatId);
+                    break;
+                case "ℹ️ Допомога":
+                    await ShowHelp(chatId);
+                    break;
+                default:
+                    await botClient.SendTextMessageAsync(chatId, "Оберіть дію з меню 👇", 
+                        replyMarkup: _mainKeyboard);
+                    break;
+            }
         }
-        else if (messageText.StartsWith("/receivedweather"))
+        else if (update.CallbackQuery is { } callbackQuery)
         {
-            var receivedWeatherHistory = await _weatherHistoryService.GetReceivedWeatherHistory(chatId);
-
-            if (receivedWeatherHistory == null || !receivedWeatherHistory.Any())
-            {
-                await botClient.SendTextMessageAsync(chatId, "📭 Ви ще не отримували погоду від інших користувачів.");
-                return;
-            }
-
-            var responseText = new StringBuilder("📨 *Отримана погода:*\n\n");
-          
-            foreach (var weather in receivedWeatherHistory)
-            {
-                var recepientuser = await _userRepository.FindByUserIdAsync(chatId);
-                responseText.AppendLine($"📅 *{weather.CreationDate:yyyy-MM-dd}* від користувача : {recepientuser.FirstName} {recepientuser.LastName}");
-                responseText.AppendLine($"🌍 {weather.City}, {weather.Country}");
-                responseText.AppendLine($"☁ {weather.WeatherDescription}");
-                responseText.AppendLine($"🌡 Температура: {weather.Temperature}°C (відчувається як {weather.FeelsLike}°C)");
-                responseText.AppendLine($"💧 Вологість: {weather.Humidity}%");
-                responseText.AppendLine($"💨 Вітер: {weather.WindSpeed} м/с");
-                responseText.AppendLine(new string('-', 30));
-            }
-
-            await botClient.SendTextMessageAsync(chatId, EscapeMarkdownV2(responseText.ToString()), parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2);
+            await HandleCallbackQuery(callbackQuery);
         }
-        else if (messageText.StartsWith("/userandweather"))
+    }
+    private async Task EnsureUserExists(Message message)
+    {
+        var chatId = message.Chat.Id;
+        var existingUser  = await _userRepository.FindByUserIdAsync(chatId);
+        if (existingUser  == null)
         {
-            var parts = messageText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length < 2 || !long.TryParse(parts[1], out long userId))
+            var newUser  = new User
             {
-                await botClient.SendTextMessageAsync(chatId, "❌ Невірний формат. Використовуйте: /userandweather {userId}");
-                return;
-            }
-
-            var userAndWeatherHistory = await _userService.GetUserAndWeatherHistory(Guid.Empty, userId);
-
-            if (userAndWeatherHistory == null || !userAndWeatherHistory.Any())
-            {
-                await botClient.SendTextMessageAsync(chatId, "📭 Інформація не знайдена.");
-                return;
-            }
-
-            var responseText = new StringBuilder();
-
-            foreach (var item in userAndWeatherHistory)
-            {
-                responseText.AppendLine($"👤 *Користувач:* {(item.FirstName)} {(item.LastName)} (@{(item.UserName)})");
-                responseText.AppendLine("🌦 *Історія погоди:*");
-
-                foreach (var history in item.WeatherHistory)
-                {
-                    responseText.AppendLine($"📅 *{history.Date:yyyy-MM-dd}*  {(history.City)} ({(history.Country)})");
-                    responseText.AppendLine($"   ☀ {(history.WeatherDescription)}");
-                    responseText.AppendLine($"   🌡 Температура: {(history.Temperature)}°C (Відчувається як {(history.FeelsLike)}°C)");
-                    responseText.AppendLine($"   💧 Вологість: {(history.Humidity)}%");
-                    responseText.AppendLine($"   💨 Вітер: {(history.WindSpeed)} м/с");
-                    responseText.AppendLine();
-                }
-
-                responseText.AppendLine(new string('-', 30)); 
-            }
-
-            await botClient.SendTextMessageAsync(chatId, EscapeMarkdownV2(responseText.ToString()), parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2);
+                UserId = message.From.Id,
+                UserName = message.From.Username,
+                FirstName = message.Chat.FirstName,
+                LastName = message.Chat.LastName
+            };
+            await _userRepository.InsertOneAsync(newUser);
         }
-        else if (messageText.StartsWith("/users"))
+    }
+    private async Task HandleStartCommand(long chatId)
+    {
+        await _botClient.SendTextMessageAsync(
+            chatId,
+            "👋 Доброго дня! Оберіть дію з меню 👇",
+            replyMarkup: _mainKeyboard);
+    }
+
+    private async Task RequestCityInput(long chatId, string action)
+    {
+        await _botClient.SendTextMessageAsync(
+            chatId,
+            "Введіть назву міста:",
+            replyMarkup: new ForceReplyMarkup { Selective = true });
+    }
+
+    private async Task HandleCityInput(long chatId, string city)
+    {
+        if (_pendingWeatherRequests.TryGetValue(chatId, out long recipientId))
         {
-            var users = await _userService.GetAllUsers();
+            var result = await _weatherService.SendWeather(city, chatId, recipientId);
 
-            if (users == null || !users.Any())
-            {
-                await botClient.SendTextMessageAsync(chatId, "📭 Список користувачів порожній.");
-                return;
-            }
+            await _botClient.SendTextMessageAsync(chatId, result, replyMarkup: _mainKeyboard);
 
-            var responseText = new StringBuilder("📋 *Список користувачів:*\n\n");
-
-            int number = 1;
-            foreach (var user in users)
-            {
-                responseText.AppendLine($"{number}👤 {user.FirstName} {user.LastName} (@{user.UserName})\n Роль : {user.Role}\n Id : {user.UserId}");
-                number++;
-            }
-
-            await botClient.SendTextMessageAsync(chatId, EscapeMarkdownV2(responseText.ToString()), parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2);
-        }
-        else if (messageText.StartsWith("/help"))
-        {
-            var helpText = new StringBuilder("📖 *Доступні команди:*\n\n");
-            helpText.AppendLine("/start - Запуск бота");
-            helpText.AppendLine("/weather {місто} - Отримати погоду у вказаному місті");
-            helpText.AppendLine("/sendweather {userId} {місто} - Відправити погоду іншому користувачу");
-            helpText.AppendLine("/receivedweather - Переглянути отриману погоду");
-            helpText.AppendLine("/userandweather {userId} - Отримати історію погоди користувача");
-            helpText.AppendLine("/users - Отримати список користувачів");
-            helpText.AppendLine("/help - Показати список доступних команд");
-
-            await botClient.SendTextMessageAsync(chatId, EscapeMarkdownV2(helpText.ToString()), parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2);
+            _pendingWeatherRequests.Remove(chatId);
         }
         else
         {
-            await botClient.SendTextMessageAsync(chatId, "❌ Невідома команда. Напишіть /help для списку доступних команд.");
+            var weatherResponse = await _weatherService.GetWeatherAsync(city, chatId);
+
+            var weatherText = new StringBuilder();
+            weatherText.AppendLine(HelperFormating.FormatWeatherMessage(weatherResponse));
+
+            await _botClient.SendTextMessageAsync(
+                chatId, 
+                HelperFormating.EscapeMarkdownV2(weatherText.ToString()), 
+                parseMode: ParseMode.MarkdownV2, 
+                replyMarkup: _mainKeyboard);
         }
     }
-}
 
-    private string EscapeMarkdownV2(string text)
+    private async Task RequestCityAndUserInput(long chatId)
     {
-        if (string.IsNullOrEmpty(text)) return "";
+        var users = await _userService.GetAllUsers();
+        var buttons = users.Select(u => 
+                InlineKeyboardButton.WithCallbackData($"{u.FirstName} {u.LastName}", $"send_to_{u.UserId}"))
+            .Chunk(2)
+            .ToList();
 
-        var specialCharacters = new HashSet<char> {
-            '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'
-        };
-
-        var escapedText = new StringBuilder(text.Length);
-
-        foreach (char c in text)
-        {
-            if (specialCharacters.Contains(c))
-            {
-                escapedText.Append('\\');
-            }
-            escapedText.Append(c);
-        }
-
-        return escapedText.ToString();
+        await _botClient.SendTextMessageAsync(
+            chatId,
+            "Оберіть користувача:",
+            replyMarkup: new InlineKeyboardMarkup(buttons));
     }
 
+    private async Task HandleCallbackQuery(CallbackQuery callbackQuery)
+    {
+        var data = callbackQuery.Data;
+        var chatId = callbackQuery.Message.Chat.Id;
 
+        if (data.StartsWith("send_to_"))
+        {
+            var recipientId = long.Parse(data.Split('_')[2]);
+            await _botClient.SendTextMessageAsync(
+                chatId,
+                "Введіть назву міста:",
+                replyMarkup: new ForceReplyMarkup { Selective = true });
+
+            _pendingWeatherRequests[chatId] = recipientId;
+        }
+    }
+    private async Task RequestUserForHistory(long chatId)
+    {
+        var history = await _userService.GetUserAndWeatherHistory(Guid.Empty, chatId);
+
+        if (history == null || !history.Any())
+        {
+            await _botClient.SendTextMessageAsync(chatId, "📭 Історія погоди не знайдена.");
+            return;
+        }
+
+        var responseText = new StringBuilder("📊 Ваша історія погоди:\n\n");
+        foreach (var userHistory in history)
+        {
+            responseText.AppendLine($"👤 {userHistory.FirstName} {userHistory.LastName} (@{userHistory.UserName})");
+            foreach (var weather in userHistory.WeatherHistory)
+            {
+                responseText.AppendLine(HelperFormating.FormatWeatherMessage(weather));
+                responseText.AppendLine(new string('-', 20));
+            }
+        }
+
+        await _botClient.SendTextMessageAsync(chatId, HelperFormating.EscapeMarkdownV2(responseText.ToString()), parseMode: ParseMode.MarkdownV2);
+    }
+    private async Task ShowReceivedWeather(long chatId)
+    {
+        var receivedWeatherHistory = await _weatherHistoryService.GetReceivedWeatherHistory(chatId);
+
+        if (!receivedWeatherHistory.Any())
+        {
+            await _botClient.SendTextMessageAsync(chatId, "📭 Ви ще не отримували погоду.");
+            return;
+        }
+
+        var response = new StringBuilder("📨 Отримана погода:\n\n");
+        foreach (var weather in receivedWeatherHistory)
+        {
+            response.Append(HelperFormating.FormatWeatherMessage(weather));
+        }
+
+        await _botClient.SendTextMessageAsync(chatId, response.ToString(), replyMarkup: _mainKeyboard);
+    }
+
+    private async Task ShowHelp(long chatId)
+    {
+        var helpText = new StringBuilder("📖 Доступні команди:\n\n");
+        helpText.AppendLine("🌦 Погода - Отримати погоду");
+        helpText.AppendLine("📤 Відправити погоду - Поділитись погодою");
+        helpText.AppendLine("📨 Отримана погода - Переглянути історію");
+        helpText.AppendLine("📊 Історія погоди - Історія запитів");
+        helpText.AppendLine("👥 Користувачі - Список користувачів");
+
+        await _botClient.SendTextMessageAsync(chatId, helpText.ToString(), replyMarkup: _mainKeyboard);
+    }
+
+    private async Task ShowUsers(long chatId)
+    {
+        var users = await _userService.GetAllUsers();
+
+        if (users == null || !users.Any())
+        {
+            await _botClient.SendTextMessageAsync(chatId, "📭 Список користувачів порожній.", replyMarkup: _mainKeyboard);
+            return;
+        }
+
+        var responseText = new StringBuilder("📋 Список користувачів:\n\n");
+        int number = 1;
+        foreach (var user in users)
+        {
+            responseText.AppendLine($"{number}👤 {user.FirstName} {user.LastName} (@{user.UserName})\n Роль : {user.Role}\n Id : {user.UserId}");
+            number++;
+        }
+
+        await _botClient.SendTextMessageAsync(chatId,HelperFormating.EscapeMarkdownV2(responseText.ToString()), parseMode: ParseMode.MarkdownV2, replyMarkup: _mainKeyboard);
+    }
 
     private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {

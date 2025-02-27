@@ -9,7 +9,7 @@ namespace Test_INBOOST.Service
 {
     public interface IWeatherService
     {
-        Task<string> GetWeatherAsync(string? city, long? userId);
+        Task<WeatherHistory> GetWeatherAsync(string? city, long? userId);
 
         Task<string> SendWeather(string city, long userId, long recipientId);
     }
@@ -66,7 +66,7 @@ namespace Test_INBOOST.Service
         }
 
 
-        public async Task<string> GetWeatherAsync(string city, long? userId)
+        public async Task<WeatherHistory> GetWeatherAsync(string city, long? userId)
         {
             var response = await _httpClient.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={_apiKey}&units=metric");
             response.EnsureSuccessStatusCode();
@@ -82,14 +82,8 @@ namespace Test_INBOOST.Service
             var cityName = weatherData["name"]?.ToString();
             var country = weatherData["sys"]?["country"]?.ToString();
 
-            var formattedWeather = $"Погода в {cityName}, {country}:\n" +
-                                   $"- Опис: {weatherDescription}\n" +
-                                   $"- Температура: {temperature}°C\n" +
-                                   $"- Відчувається як: {feelsLike}°C\n" +
-                                   $"- Вологість: {humidity}%\n" +
-                                   $"- Швидкість вітру: {windSpeed} м/с";
 
-            await _weatherHistoryRepository.InsertOneAsync(new WeatherHistory()
+            var weather = new WeatherHistory()
             {
                 City = city,
                 UserId = (long)userId,
@@ -99,9 +93,11 @@ namespace Test_INBOOST.Service
                 Humidity = humidity,
                 WindSpeed = windSpeed,
                 Country = country,
-            });
+            };
+                
+            await _weatherHistoryRepository.InsertOneAsync(weather);
 
-            return formattedWeather;
+            return weather;
         }
     }
 }
