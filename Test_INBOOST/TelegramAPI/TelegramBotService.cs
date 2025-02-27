@@ -150,7 +150,9 @@ public class TelegramBotService
             var weatherResponse = await _weatherService.GetWeatherAsync(city, chatId);
 
             var weatherText = new StringBuilder();
-            weatherText.AppendLine(HelperFormating.FormatWeatherMessage(weatherResponse));
+            
+            var user = await _userRepository.FindByUserIdAsync(chatId);
+            weatherText.AppendLine(HelperFormating.FormatWeatherMessage(weatherResponse,user));
 
             await _botClient.SendTextMessageAsync(
                 chatId, 
@@ -206,8 +208,8 @@ public class TelegramBotService
             responseText.AppendLine($"👤 {userHistory.FirstName} {userHistory.LastName} (@{userHistory.UserName})");
             foreach (var weather in userHistory.WeatherHistory)
             {
+                
                 responseText.AppendLine(HelperFormating.FormatWeatherMessage(weather));
-                responseText.AppendLine(new string('-', 20));
             }
         }
 
@@ -226,7 +228,9 @@ public class TelegramBotService
         var response = new StringBuilder("📨 Отримана погода:\n\n");
         foreach (var weather in receivedWeatherHistory)
         {
-            response.Append(HelperFormating.FormatWeatherMessage(weather));
+            var user = await _userRepository.FindByUserIdAsync(weather.UserId);
+             
+            response.Append(HelperFormating.FormatWeatherMessage(weather,user));
         }
 
         await _botClient.SendTextMessageAsync(chatId, response.ToString(), replyMarkup: _mainKeyboard);
